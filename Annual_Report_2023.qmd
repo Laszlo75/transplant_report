@@ -1,0 +1,1039 @@
+---
+author: L Szabo
+title: "Annual Activity Report"
+subtitle: "2023"
+date: 12 January, 2024
+date-modified: "`r format(Sys.time(), '%d %B, %Y')`"
+format:
+  html:
+    toc: TRUE
+  pptx: default
+  pdf: default
+  revealjs: 
+    # logo: logo.png
+    footer: "Activity 2023"
+    slide-number: true
+    # css: "styles.css"
+parameters:
+  report_month: "2023-07"
+---
+
+```{r setup}
+#| message: False
+#| echo: FALSE
+#| warning: FALSE
+
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(readxl)
+library(dplyr)
+library(zoo)
+library(ggplot2)
+library(tidyr)
+library(forcats)
+library(officer)
+library(rvg)
+library(stringr)
+library(purrr)
+library(lubridate)
+library(todor)
+source("theme_swd.R")
+library(gghighlight)
+library(gtsummary)
+library(pdftools)
+options(todor_extra = c("qmd"))
+
+theme_set(theme_classic())
+
+source("functions.R")
+```
+
+```{r}
+#| label: add_new_data
+# warning: false
+# TODO write some loop or map to add all
+offers <- read_new_dashboard_data(year = 2022, month = 10)
+offers <- read_new_dashboard_data(year = 2022, month = 11)
+offers <- read_new_dashboard_data(year = 2022, month = 12)
+offers <- read_new_dashboard_data(year = 2023, month = 01)
+offers <- read_new_dashboard_data(year = 2023, month = 02)
+offers <- read_new_dashboard_data(year = 2023, month = 03)
+offers <- read_new_dashboard_data(year = 2023, month = 04)
+offers <- read_new_dashboard_data(year = 2023, month = 05)
+offers <- read_new_dashboard_data(year = 2023, month = 10)
+offers <- read_new_dashboard_data(year = 2023, month = 11)
+
+declined_kidney <- read_new_declined_kidney_data(year = 2022, month = 10)
+declined_kidney <- read_new_declined_kidney_data(year = 2022, month = 11)
+declined_kidney <- read_new_declined_kidney_data(year = 2022, month = 12)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 01)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 02)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 03)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 04)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 05)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 06)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 07)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 08)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 09)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 10)
+declined_kidney <- read_new_declined_kidney_data(year = 2023, month = 11)
+
+
+declined_pancreas <- read_new_declined_pancreas_data(year = 2023, month = 01)
+declined_pancreas <- read_new_declined_pancreas_data(year = 2023, month = 02)
+declined_pancreas <- read_new_declined_pancreas_data(year = 2023, month = 04)
+declined_pancreas <- read_new_declined_pancreas_data(year = 2023, month = 05)
+declined_pancreas <- read_new_declined_pancreas_data(year = 2023, month = 06)
+declined_pancreas <- read_new_declined_pancreas_data(year = 2023, month = 07)
+declined_pancreas <- read_new_declined_pancreas_data(year = 2023, month = 08)
+declined_pancreas <- read_new_declined_pancreas_data(year = 2023, month = 09)
+declined_pancreas <- read_new_declined_pancreas_data(year = 2023, month = 10)
+declined_pancreas <- read_new_declined_pancreas_data(year = 2023, month = 11)
+
+```
+
+```{r}
+#| label: export data
+#| include: false
+# NOTE this dataset could be shared on sharepoint site
+WriteXLS::WriteXLS(declined_kidney, "declined_kidney.xlsx")
+```
+
+<!-- # Offers -->
+
+<!-- ## Offers over time -->
+
+```{r}
+#| warning: FALSE
+#| include: false
+#| label: fig-declined_offers
+#| fig-cap: Monthly number of kidney and pancreas offers. Each gray line represents a different transplant unit, the bold dark red line represents Cardiff.
+
+p_offers <- ggplot(data = offers, aes(date, offers, group = centre)) +
+  geom_line(color = GRAY9) +
+  geom_line(data = offers %>% filter(centre == "Cardiff"), color = RED1, linewidth = 1.5) +
+  geom_point(data = offers %>% filter(centre == "Cardiff"), color = RED1, size = 3) +
+  geom_text(data = offers %>% filter(centre == "Cardiff"), aes(y = 100, label = offers)) +
+  ylim(0, 115) +
+  # theme_swd() +
+  facet_wrap(~organ, nrow = 1, ncol = 2) +
+  theme(
+    strip.text.x = element_text(size = 20, colour = GRAY3),
+    panel.spacing.x = unit(2, "lines")
+  )
+
+p_offers
+
+```
+
+```{r all_offers_table}
+#| include: false
+gt_tbl_offers <- offers %>%
+  select(centre, offers, date, organ) %>%
+  mutate(date = as.yearmon(date)) %>%
+  pivot_wider(names_from = date, values_from = offers) %>%
+  gt::gt()
+
+gt_tbl_offers
+
+```
+
+<!-- ## Kidney offers, declines, transplants -->
+
+```{r offers, declines, transplants}
+#| include: false
+# summary <- read_excel("../raw_data/Summary.xlsx") %>% 
+#   mutate(date = as.Date(paste0(Year, "-", Month, "-01")))
+# 
+# 
+# p_offers_transplants_kidney <- ggplot(summary %>% filter(Organ == "kidney"), aes(date, Offers)) +
+#   geom_line() +
+#   geom_text(aes(date, Offers, label = Offers), nudge_y = 5) +
+#   geom_line(aes(date, Declined)) +
+#   geom_text(aes(date, Declined, label = Declined), nudge_y = 5) +
+#   geom_line(aes(date, Transplants)) +
+#   geom_text(aes(date, Transplants, label = Transplants), nudge_y = 5) +
+#   theme_swd()
+# 
+# p_offers_transplants_kidney
+# ggsave("offers_transplants.jpeg", p_offers_transplants, "jpeg", dpi = "retina")
+```
+
+```{r}
+#| label: produce-the-summary-table
+#| include: false
+#| 
+# we have the offers data in offers table
+offers_cardiff <- offers %>%
+  filter(centre == "Cardiff") %>%
+  mutate(tx_month2 = as.yearmon(date)) %>%
+  select(tx_month2, organ, offers)
+
+# get declined data by month
+
+declined_kidney_summary <- declined_kidney %>%
+  mutate(
+    tx_month2 = as.yearmon(Offer_date),
+    organ = "kidney"
+  ) %>%
+  group_by(tx_month2, organ) %>%
+  summarise(declined = n())
+
+declined_pancreas_summary <- declined_pancreas %>%
+  mutate(
+    tx_month2 = as.yearmon(Offer_date),
+    organ = "pancreas"
+  ) %>%
+  group_by(tx_month2, organ) %>%
+  summarise(declined = n())
+```
+
+```{r}
+#| label: import tx data
+
+# get transplant data - read M&M data
+
+m_m_data_post_covid <- read_excel("../raw_data/M&M Database.xlsx", sheet = "Post-COVID") %>%
+  mutate(
+    `KTX Date` = as.Date(`KTX Date`, "%d.%m.%Y"),
+    DOB2 = as.Date(as.numeric(DOB), origin = "1899-12-30"),
+    DOB = if_else(is.na(DOB2), as.Date(DOB, "%d/%m/%Y"), DOB2),
+    tx_month = as.Date(`KTX Date`, "%Y-%m"),
+    tx_month2 = as.yearmon(`KTX Date`),
+    DonorType = as.factor(DonorType),
+    DonorType = fct_collapse(DonorType,
+      LivingDonor = c("From Living Donor", "From Livinig Donor")
+    ),
+    Organ = as.factor(Organ),
+    Organ = fct_collapse(Organ,
+      `Kidney only` = c("Kidney only", "Kidney Only"),
+      pancreas = c("Simultaneous Pancreas and Kidney", "SPK", "Pancreas Only")
+    ),
+    kss = 
+      # check if donor number contains 'KSS', NA should be FALSE
+      str_detect(replace_na(`Donor Number`, ""), "KSS")
+  ) %>%
+  select(Surname:`Donor Number`, kss,  tx_month, tx_month2, DOB, `D AGE (Y)`:HD, `CIT (K)`:`CIT (P) hours`, HCV)
+
+# get precovid data
+
+m_m_data_pre_covid <- read_excel("../raw_data/M&M Database.xlsx", sheet = "Pre-COVID") %>%
+  mutate(
+    `KTX Date` = as.Date(`KTX Date`, "%d.%m.%Y"),
+    # DOB2 = as.Date(as.numeric(DOB), origin = "1899-12-30"),
+    # DOB = if_else(is.na(DOB2), as.Date(DOB, "%d/%m/%Y"), DOB2),
+    tx_month = as.Date(`KTX Date`, "%Y-%m"),
+    tx_month2 = as.yearmon(`KTX Date`),
+    DonorType = as.factor(DonorType),
+    DonorType = fct_collapse(DonorType,
+      LivingDonor = c("From Living Donor", "From Livinig Donor")
+    ),
+    Organ = as.factor(Organ),
+    Organ = fct_collapse(Organ,
+      `Kidney only` = c("Kidney only", "Kidney Only"),
+      pancreas = c("Simultaneous Pancreas and Kidney", "SPK", "Pancreas Only")
+    ),
+    `KTX No.` = as.numeric("KTX No.")
+  ) %>%
+   select(Surname:`KTX No.`, tx_month, tx_month2, DOB)
+
+m_m_data <- bind_rows(m_m_data_pre_covid, m_m_data_post_covid)
+
+# summarise by month and organ
+m_m_data_summary <- m_m_data %>%
+  filter(!DonorType == "LivingDonor") %>%
+  mutate(organ = fct_collapse(Organ,
+    kidney = "Kidney only",
+    pancreas = c("SPK", "Pancreas Only")
+  )) %>%
+  group_by(tx_month2, organ) %>%
+  summarise(transplant = n())
+  
+# join the 3 tables
+summary_new <- offers_cardiff %>% 
+  full_join(rbind(declined_kidney_summary, declined_pancreas_summary), by = c("tx_month2", "organ")) %>% 
+  full_join(m_m_data_summary, by = c("tx_month2", "organ")) %>% 
+  arrange(tx_month2) %>% 
+  mutate(transplant = coalesce(transplant, 0),
+         tx_month2 = as.Date(tx_month2)) %>% 
+  ungroup()
+
+
+
+```
+
+```{r}
+#| include: false
+#| label: fig-kidney-offers-declines-transplants
+#| fig-cap: Number of kidney offers, declined offers transplanted elsewhere and transplants by month
+#| warning: false
+p_offers_transplants_kidney <- ggplot(summary_new %>% filter(organ == "kidney", tx_month2>"2022-09-01", tx_month2<"2023-12-01"), aes(tx_month2, offers)) +
+  geom_line(color = RED1, linewidth = 1.5) +
+  geom_text(aes(tx_month2, offers, label = offers), nudge_y = 5) +
+  geom_line(aes(tx_month2, declined), color = BLUE1, linewidth = 1.5) +
+  geom_text(aes(tx_month2, declined, label = declined), nudge_y = 5) +
+  geom_line(aes(tx_month2, transplant), color = GREEN1, linewidth = 1.5) +
+  geom_text(aes(tx_month2, transplant, label = transplant), nudge_y = 5) +
+  labs(x = "month", y = "count")
+# +
+#   xlim(as.yearmon("Aug 2023", "Jul 2023"))
+
+p_offers_transplants_kidney
+```
+
+<!-- ## Pancreas offers, declines, transplants -->
+
+```{r}
+#| include: false
+#| label: fig-pancreas-offers-declines-transplants
+#| fig-cap: Pancreas offers, declined offers and transplants by month
+# offers, declines, tx from summary_new
+p_offers_transplants_pancreas <- ggplot(summary_new %>% filter(organ == "pancreas", tx_month2>"2022-09-01"), aes(tx_month2, offers)) +
+  geom_line() +
+  geom_text(aes(tx_month2, offers, label = offers), nudge_y = 5) +
+  geom_line(aes(tx_month2, declined)) +
+  geom_text(aes(tx_month2, declined, label = declined), nudge_y = 5) +
+  geom_line(aes(tx_month2, transplant)) +
+  geom_text(aes(tx_month2, transplant, label = transplant), nudge_y = 5)
+
+p_offers_transplants_pancreas
+```
+
+<!-- # Cumulative transplant numbers -->
+
+<!-- ## Cumulative number of transplants -->
+
+```{r}
+#| include: false
+#| label: fig-cumulative-tx-number
+#| fig-cap: Cumulative number of transplants in 2023 v 2022
+cumsum_all_tx <- m_m_data %>% 
+  filter(tx_month2>"2021-12-31" & tx_month2<="2023-12-31") %>% 
+  # mutate(organ = fct_collapse(Organ, kidney = "Kidney only",
+  #              pancreas = c("SPK", "Pancreas Only"))) %>%
+  group_by(tx_month2) %>%
+  summarise(transplant = n()) %>%
+  mutate(year = year(tx_month2)) %>% 
+  group_by(year) %>%
+  mutate(cumsum = cumsum(transplant)) %>% 
+  ungroup()
+
+
+  ggplot(cumsum_all_tx, aes(format(tx_month2, "%m"), cumsum, group = year)) +
+  geom_line(color = GRAY8, linewidth = 1) +
+  geom_point(data = cumsum_all_tx %>% filter(year == 2022, tx_month2 == "2022-12-01"), aes(format(tx_month2, "%m"), cumsum, group = year), size=2.5, color = GRAY8) +
+  geom_text(data = cumsum_all_tx %>% filter(year == 2022, tx_month2 == "2022-12-01"), aes(format(tx_month2, "%m"), label = cumsum), color = GRAY8, nudge_y = -5, nudge_x = .3) +
+  geom_line(data = cumsum_all_tx %>% filter(tx_month2>"2022-12-31"), color = RED1, linewidth = 1.5) +
+  geom_point(data = cumsum_all_tx %>% filter(year == 2023, tx_month2 == "2023-12-01"), aes(format(tx_month2, "%m"), cumsum, group = year), size=2.5, color = RED1) +
+  geom_text(data = cumsum_all_tx %>% filter(year == 2023, tx_month2 == "2023-12-01"), aes(format(tx_month2, "%m"), label = cumsum), color = RED1, nudge_y = 5, nudge_x = .3) +
+    labs(
+      title = "Cumulative Number of Transplants in 2023 v 2022",
+      y = "cumulative transplant number",
+      x = "month")
+```
+
+<!-- ## Cumulative deceased donor kidney and pancreas transplants -->
+
+```{r}
+#| include: false
+#| label: fig-cumulative-kidney-pancreas
+#| fig-cap: Cumulative number of kidney and SPK transplants 2023 v 2022
+#| 
+summary_new <- summary_new %>% 
+  mutate(year = year(tx_month2)) %>% 
+  group_by(organ, year) %>% 
+  mutate(cumsum = cumsum(transplant)) %>% 
+  ungroup()
+
+p_cum_kidney_pancreas <- 
+  ggplot(summary_new %>% filter(tx_month2>"2021-12-31" & tx_month2<="2023-12-31"), aes(format(tx_month2, "%m"), cumsum, group = year)) +
+  geom_line(color = GRAY8, linewidth = 1) +
+  geom_point(data = summary_new %>% filter(year == 2022, tx_month2 == "2022-12-01"), aes(format(tx_month2, "%m"), cumsum, group = year), size=2.5, color = GRAY8) +
+  geom_text(data = summary_new %>% filter(year == 2022, tx_month2 == "2022-12-01"), aes(format(tx_month2, "%m"), label = cumsum), color = GRAY8, nudge_y = -5, nudge_x = .2) +
+  geom_line(data = summary_new %>% filter(tx_month2>"2022-12-31" & tx_month2<="2023-12-31"), color = RED1, linewidth = 1.5) +
+  geom_point(data = summary_new %>% filter(year == 2023, tx_month2 == "2023-12-01"), aes(format(tx_month2, "%m"), cumsum, group = year), size=2.5, color = RED1) +
+  geom_text(data = summary_new %>% filter(year == 2023, tx_month2 == "2023-12-01"), aes(format(tx_month2, "%m"), label = cumsum), color = RED1, nudge_y = 5, nudge_x = 0.2) +
+  labs(y = "cumulative transplant number",
+       x = "month") +
+  facet_wrap(~ organ, nrow = 1, ncol = 2) +
+  theme(strip.text.x = element_text(size = 15, colour = GRAY3),
+      panel.spacing.x = unit(2, "lines"))
+
+p_cum_kidney_pancreas
+```
+
+<!-- ## Cumulative living donor transplants -->
+
+```{r}
+#| include: false
+#| label: fig-cumulative-living-donor-tx
+#| fig-cap: Cumulative number of living donor transplants 2023 v 2022
+#| 
+
+living_donor_data_summary <- m_m_data %>%
+  filter(DonorType == "LivingDonor") %>% 
+  rename(organ = "Organ") %>% 
+  group_by(tx_month2) %>%
+  summarise(transplant = n()) %>% 
+  mutate(year = year(tx_month2)) %>% 
+  group_by(year) %>% 
+  mutate(cumsum = cumsum(transplant)) %>% 
+  ungroup()
+
+p_cum_living_donor_kidney <- 
+  ggplot(living_donor_data_summary %>% filter(tx_month2>"2021-12-31" & tx_month2<="2023-12-01"), aes(format(tx_month2, "%m"), cumsum, group = year)) +
+  geom_line(color = GRAY8, linewidth = 1) +
+  geom_point(data = living_donor_data_summary %>% filter(year == 2022, tx_month2 == "2022-12-01"), aes(format(tx_month2, "%m"), cumsum, group = year), size=2.5, color = GRAY8) +
+  geom_text(data = living_donor_data_summary %>% filter(year == 2022, tx_month2 == "2022-12-01"), aes(format(tx_month2, "%m"), label = cumsum), color = GRAY8, nudge_y = -5) +
+  geom_line(data = living_donor_data_summary %>% filter(tx_month2>"2022-12-31" & tx_month2<="2023-12-01"), color = RED1, linewidth = 1.5) +
+  geom_point(data = living_donor_data_summary %>% filter(year == 2023, tx_month2 == "2023-12-01"), aes(format(tx_month2, "%m"), cumsum, group = year), size=2.5, color = RED1) +
+  geom_text(data = living_donor_data_summary %>% filter(year == 2023, tx_month2 == "2023-12-01"), aes(format(tx_month2, "%m"), label = cumsum), color = RED1, nudge_y = 3, nudge_x = 0 ) +
+  labs(
+    title = "Cumulative number of living donor kidney transplants in 2023 vs 2022",
+    # subtitle = "living donor",
+    y = "cumulative transplant number",
+    x = "month") 
+  # theme(strip.text.x = element_text(size = 15, colour = GRAY3),
+    #  panel.spacing.x = unit(2, "lines")) +
+ 
+
+p_cum_living_donor_kidney
+```
+
+# Activity by year
+
+## Transplant Activity by Year
+
+```{r}
+#| label: yearly_activity
+
+m_m_data %>%
+  filter(`KTX Date` >= "2020-01-01" & year(`KTX Date`) < 2024) %>%
+  ggplot(aes(year(`KTX Date`), fill = ifelse(year(`KTX Date`) == 2023, "Highlighted", "Normal"))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = after_stat(count)), position = "identity", vjust = -0.5) +
+  scale_fill_manual("legend",         ###### in this call: colour change
+                    values = c("Highlighted" = RED1, "Normal" = BLUE1)) +
+  ## drop legend and Y-axis title
+  theme(legend.position = "none", axis.title.x = element_blank())
+```
+
+## Annual activity by organ
+
+```{r}
+m_m_data %>%
+  filter(`KTX Date` >= "2020-01-01" & year(`KTX Date`) < 2024) %>%
+  ggplot(aes(year(`KTX Date`), fill = ifelse(year(`KTX Date`) == 2023, "Highlighted", "Normal"))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = after_stat(count)), position = "identity", vjust = -0.5) +
+  scale_fill_manual("legend",         ###### in this call: colour change
+                    values = c("Highlighted" = RED1, "Normal" = BLUE1)) +
+  ## drop legend and Y-axis title
+  theme(legend.position = "none", axis.title.x = element_blank())+
+  facet_wrap(nrow = 1, facets = "Organ")
+```
+
+## Annual activity by donor type
+
+```{r}
+m_m_data %>%
+  filter(`KTX Date` >= "2020-01-01" & year(`KTX Date`) < 2024) %>%
+  ggplot(aes(year(`KTX Date`), fill = ifelse(year(`KTX Date`) == 2023, "Highlighted", "Normal"))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = after_stat(count)), position = "identity", vjust = -0.5) +
+  scale_fill_manual("legend",         ###### in this call: colour change
+                    values = c("Highlighted" = RED1, "Normal" = BLUE1)) +
+  ## drop legend and Y-axis title
+  theme(legend.position = "none", axis.title.x = element_blank())+
+  facet_wrap(nrow = 1, facets = "DonorType")
+```
+
+## HCV positive donors
+
+```{r}
+m_m_data %>%
+  filter(`KTX Date` >= "2020-01-01" &
+           year(`KTX Date`) < 2024 &
+           !is.na(HCV)) %>%
+  ggplot(aes(year(`KTX Date`), fill = ifelse(
+    year(`KTX Date`) == 2023, "Highlighted", "Normal"
+  ))) +
+  geom_bar() +
+  geom_text(
+    stat = "count",
+    aes(label = after_stat(count)),
+    position = "identity",
+    vjust = -0.5
+  ) +
+  scale_fill_manual("legend",
+                    values = c("Highlighted" = RED1, "Normal" = BLUE1)) +
+  theme(legend.position = "none", axis.title.x = element_blank())
+```
+
+# Activity by month
+
+## Transplant Activity by Month
+
+```{r}
+#| label: activity_by_month
+# fig-cap: Transplant activity by month
+
+db2023 <- m_m_data %>%
+  filter(year(`KTX Date`) == 2023)
+
+ggplot(db2023, aes(month(`KTX Date`), , fill = ifelse(month(`KTX Date`) == 10, "Highlighted", "Normal"))) +
+  geom_bar() +
+  scale_x_discrete(limits = month.abb) +
+  scale_y_continuous(limits = c(0, 22)) +
+  scale_fill_manual("legend",         ###### in this call: colour change
+                    values = c("Highlighted" = RED1, "Normal" = BLUE1)) +
+  theme(legend.position = "none", axis.title.x = element_blank()) +
+  # labs(title = "Transplants by Month in 2023",
+  #      x = "") +
+  geom_text(stat = "count", aes(label = after_stat(count)), position = "identity", vjust = -0.5)
+```
+
+## Transplants by organ by month
+
+```{r}
+#| label: tx-by-organ-month
+# fig-cap: Transplants by organ by month
+#| 
+ggplot(db2023, aes(month(`KTX Date`), fill = Organ)) +
+  geom_bar() +
+  scale_x_discrete(limits = month.abb) +
+  labs(
+    # title = "Transplants by Organ by Month in 2023",
+    x = "") +
+  geom_text(stat = "count", aes(label = after_stat(count)), position = position_stack(vjust = 0.5)) +
+  theme(legend.position = c(.93, .9))
+```
+
+## Kidney transplants by donor type
+
+```{r}
+#| label: kidney-donor-type-month
+# fig-cap: Kidney transplants by donor type and month
+#| 
+ggplot(subset(db2023, Organ == "Kidney only"), aes(month(`KTX Date`), fill = DonorType)) +
+  geom_bar() +
+  scale_x_discrete(limits = month.abb) +
+  labs(
+    # title = "Kidney Transplants by Donor type by Month in 2023",
+    x = "") +
+  geom_text(stat = "count", aes(label = after_stat(count)), position = position_stack(vjust = 0.5)) +
+  theme(legend.position = c(.94, .9))
+```
+
+## Pancreas Transplants by donor type
+
+```{r}
+#| label: pancreas-donor-type-month
+
+ggplot(subset(db2023, Organ == "pancreas"), aes(month(`KTX Date`), fill = DonorType)) +
+  geom_bar(width = 0.9) +
+  scale_x_discrete(limits = month.abb) +
+  scale_y_continuous(breaks = c(1)) +
+  labs(
+    # title = "Pancreas Transplants by Donor type by Month in 2023",
+    x = "") +
+  geom_text(stat = "count", aes(label = after_stat(count)), position = position_stack(vjust = 0.5)) +
+  theme(legend.position = c(.9, .9))
+```
+
+# Hospital stay
+
+```{r}
+#| label: import_hospital_stay
+#| include: false
+
+hospital_stay <- read_excel("../raw_data/TxDecember2023Finance.xlsx", sheet = "Tx D&Ds", skip = 4) %>%
+  rename(admission_date = Date...7,
+         tx_date = Date...8,
+         discharge_date = Date...9,
+         length_of_stay = `of stay`) %>%
+  drop_na(DoB) %>% 
+  mutate(`Hospital No.`= str_sub(`Hospital No.`, 1, 7),
+         discharge_date = as.Date(as.numeric(discharge_date), origin = "1899-12-30"),
+         LOS = difftime(discharge_date, admission_date, units = "days")
+  ) %>% 
+         # discharge_date = na_if(discharge_date, is.character())) %>% 
+  select(Name, DoB, `Hospital No.`, admission_date:length_of_stay, LOS)
+
+
+# join hospital_stay to m_m_data
+m_m_data <- m_m_data %>% 
+  mutate(`Hospital No.` = str_sub(`Hospital No.`, 1, 7)) %>% 
+  left_join(hospital_stay, by = c("Hospital No." = "Hospital No."))
+```
+
+## Length of stay - Overall
+
+::: columns
+::: {.column width="30%"}
+
+```{r}
+#| label: overall-hospital-stay
+#| cap: Length of hospital stay
+#| fig-width: 2
+#| fig-align: center
+#| 
+p1 <- m_m_data %>%
+  filter(year(`KTX Date`) == 2023) %>%
+  ggplot(aes(x = factor(0), y = `LOS`)) +
+  geom_violin() +
+  geom_boxplot(width = 0.2) +
+  xlab("") +
+  # remove tick and numbers
+  theme(axis.ticks.x = element_blank()) +
+  theme(axis.text.x = element_blank())
+
+  # geom_jitter(width = 0.05, alpha = 0.5)
+
+p1
+```
+
+:::
+::: {.column width="70%"}
+
+```{r}
+#| label: length-of-stay-overall1
+# tbl-cap: Length of stay - all transplants
+
+m_m_data %>%
+  filter(year(`KTX Date`) == 2023) %>%
+  select(`LOS`) %>% 
+  tbl_summary()
+```
+:::
+:::
+
+## Length of stay - Overall
+::: columns
+::: {.column width="30%"}
+```{r}
+#| label: overall-hospital-stay2
+#| cap: Length of hospital stay
+#| fig-width: 2
+#| fig-align: center
+
+# change y axis scale from 0 to 30
+
+p1 +
+  coord_cartesian(ylim=c(0, 30))
+
+```
+
+:::
+
+::: {.column width="70%"}
+```{r}
+#| label: length-of-stay-overal2
+# tbl-cap: Length of stay - all transplants
+
+m_m_data %>%
+  filter(year(`KTX Date`) == 2023) %>%
+  select(`LOS`) %>% 
+  tbl_summary()
+```
+:::
+:::
+
+## Length of stay - Kidney
+
+<!-- arrange vertically to middle -->
+
+```{r}
+#| label: hospital-stay-kidney
+#| fig-width: 7
+#| fig-height: 5
+#| fig-align: center
+# fig-cap: Length of stay by donor type after kidney transplant
+# fig-pos: h, align = "center", vertical = TRUE
+
+m_m_data %>% 
+  filter(year(`KTX Date`) == 2023,
+         Organ == "Kidney only") %>% 
+  ggplot(aes(x=DonorType, y=`LOS`)) +
+  geom_violin() +
+  geom_boxplot(width = 0.2) +
+  coord_cartesian(ylim=c(0, 30))
+
+
+```
+
+```{r}
+#| label: length-of-stay-kidney
+# tbl-cap: Length of stay by donor type after kidney transplant
+
+m_m_data %>% 
+  filter(Organ == "Kidney only",
+         year(`KTX Date`) == 2023) %>%
+  select(`LOS`, DonorType) %>% 
+  tbl_summary(by="DonorType")
+
+```
+
+## Length of stay - Pancreas
+
+::: columns
+::: {.column width="50%"}
+```{r}
+#| label: hospital-stay-pancreas
+#| fig-width: 2
+#| fig-align: center
+# fig-cap: Length of stay after pancreas transplant
+
+m_m_data %>% 
+  filter(Organ == "pancreas",
+         year(`KTX Date`) == 2023) %>% 
+  ggplot(aes(x=factor(0), y=`LOS`)) +
+    geom_violin() +
+    geom_boxplot(width = 0.2) +
+  geom_jitter(width = 0.05, alpha = 0.5) +
+# remove x label and ticks and numbers
+  xlab("") +
+  theme(axis.ticks.x = element_blank()) +
+  theme(axis.text.x = element_blank())
+
+
+
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| label: length-of-stay-pancreas
+# tbl-cap: Length of stay after pancreas transplant
+
+m_m_data %>% 
+  filter(Organ == "pancreas",
+         year(`KTX Date`) == 2023) %>%
+  select(`LOS`) %>% 
+  tbl_summary()
+
+
+```
+:::
+:::
+
+# CIT
+
+## CIT - Kidney
+
+```{r}
+#| label: cit_kidney_plot
+#| fig-width: 7
+#| fig-height: 5
+#| fig-align: center
+
+# fig-cap: CIT for kidney transplants
+
+ggplot(m_m_data %>% filter(Organ == "Kidney only", year(`KTX Date`) == 2023), aes(x=DonorType,  y=`CIT (K) hours`)) +
+  geom_violin() +
+  geom_boxplot(width = 0.12) +
+  # remove x label
+  xlab("")
+```
+
+```{r}
+#| label: cit_kidney_table
+# tbl-cap: CIT for kidney transplants
+m_m_data %>%
+  filter(Organ == "Kidney only",
+         year(`KTX Date`) == 2023) %>%
+  select(`CIT (K) hours`, DonorType) %>%
+  tbl_summary(by="DonorType")
+```
+
+## CIT - Living donor kidney
+
+```{r}
+#| label: cit_living_donor_plot
+#| fig-width: 7
+#| fig-height: 5
+#| fig-align: center
+#| 
+m_m_data %>% 
+  filter(Organ == "Kidney only",
+         DonorType == "LivingDonor",
+         year(`KTX Date`) == 2023) %>% 
+  ggplot(aes(x=kss, y=`CIT (K) hours`)) +
+    geom_violin() +
+    geom_boxplot(width = 0.2) 
+
+```
+
+```{r}
+#| label: cit_living_donor_table
+#| 
+m_m_data %>% 
+  filter(Organ == "Kidney only",
+         DonorType == "LivingDonor",
+         year(`KTX Date`) == 2023) %>% 
+  select(`CIT (K) hours`, kss) %>%
+  tbl_summary(by=kss)
+```
+
+
+
+## CIT - Pancreas
+
+```{r}
+#| label: cit_pancreas_plot
+#| fig-width: 7
+#| fig-height: 5
+#| fig-align: center
+
+# fig-cap: CIT for kidney transplants
+
+ggplot(m_m_data %>% filter(Organ == "pancreas", year(`KTX Date`) == 2023), aes(x=DonorType,  y=`CIT (P) hours`)) +
+  geom_violin() +
+  geom_boxplot(width = 0.12) +
+  # remove x label
+  xlab("")
+```
+
+```{r}
+#| label: cit_pancreas_table
+# tbl-cap: CIT for kidney transplants
+m_m_data %>%
+  filter(Organ == "pancreas",
+         year(`KTX Date`) == 2023) %>%
+  select(`CIT (P) hours`, DonorType) %>%
+  # remove unused DonorType levels
+  mutate(DonorType = fct_drop(DonorType)) %>%
+  tbl_summary(by="DonorType")
+  
+
+```
+
+# Donor Risk Index
+
+## DRI - Categories
+
+```{r}
+#| label: load all pdf from dir
+
+text_data <- NULL
+files <- list.files('../raw_data/EOS forms/2023 - all tx', full.names = TRUE)
+for (file in files) {
+  text <- pdf_text(file) %>%
+    str_flatten(" ") %>%
+    str_squish()
+  text_data <- c(text_data, text)
+}
+raw_donor_data <- tibble(files, text_data)
+
+```
+
+```{r}
+#| label: extract data from text
+#| 
+df_donors <- raw_donor_data %>%
+  mutate(
+    donor_number = str_extract(text_data, "(?<=ODT donor number )[^\\s]+"),
+    donor_dob = str_extract(text_data, "(?<=Date of birth )[^\\s]+"),
+    donor_age_year = str_extract(text_data, "(?<=Age )[^\\s]+"),
+    donor_age_months = str_extract(text_data, "(?<=year\\(s\\) )[^\\s]+"),
+    donor_sex = str_extract(text_data, "(?<=Sex )[^\\s]+"),
+    donor_height = str_extract(text_data, "(?<=Height )[^\\s]+"),
+    donor_weight = str_extract(text_data, "(?<=Weight )[^\\s]+"),
+    donor_hypertension = str_extract(text_data, "(?<=History of Hypertension\\? )[^\\s]+"),
+    donor_diabetes = str_extract(text_data, "(?<=History of Diabetes\\? )[^\\s]+"),
+    donor_cmv = str_extract(text_data, "(?<=CMV )[^\\s]+"),
+    donor_creatinine = str_extract(text_data, "\\w+(?= eGFR ml/min/1.73m2)"),
+    donor_egfr = str_extract(text_data, "\\w+(?= Creatinine prior to admission)"),
+    donor_date_admission = str_extract(text_data, "(?<=Date of admission to hospital )[^\\s]+"),
+    donor_type = str_extract(text_data, "(?<=Donor type\\* )[^\\s]+"),
+    donor_adrenaline = str_extract(text_data, "(?<=Adrenaline Administered )[\\w]+"),
+    donor_kts = str_extract(
+      text_data,
+      "((?<=Date \\/ Time surgery commenced )[^\\s]+.[^\\s]+)"
+    ),
+    donor_vent_stop = str_extract(
+      text_data,
+      "((?<=Date \\/ Time ventilation ceased )[^\\s]+.[^\\s]+)"
+    ),
+    donor_circ_arrest = str_extract(
+      text_data,
+      "((?<=Date \\/ Time of circulatory arrest )[^\\s]+.[^\\s]+)"
+    ),
+    donor_perfusion_start = str_extract(
+      text_data,
+      "((?<=Date \\/ Time ventilation ceased )[^\\s]+.[^\\s]+)"
+    ),
+    donor_days_in_hospital = as.numeric(
+      as.Date(donor_kts, "%d/%m/%Y") - as.Date(donor_date_admission, "%d/%m/%Y")
+    )
+  )
+```
+
+```{r}
+#| label: clean data
+
+df_donors <- df_donors %>% 
+  mutate(donor_dob = as.Date(donor_dob, "%d/%m/%Y"),
+         donor_age_year = as.numeric(donor_age_year),
+         donor_age_months = as.numeric(donor_age_months),
+         donor_sex = as.factor(donor_sex),
+         donor_height = as.numeric(donor_height),
+         donor_weight = as.numeric(donor_weight),
+         donor_hypertension = as.factor(donor_hypertension),
+         donor_diabetes = as.factor(donor_diabetes),
+         donor_cmv = as.factor(donor_cmv),
+         donor_creatinine = as.numeric(donor_creatinine),
+         donor_egfr = as.numeric(donor_egfr),
+         donor_date_admission = as.Date(donor_date_admission, "%d/%m/%Y"),
+         donor_type = as.factor(donor_type),
+         donor_adrenaline = as.factor(donor_adrenaline)
+         ) %>% 
+  mutate_at(c("donor_kts",
+              "donor_vent_stop", 
+              "donor_circ_arrest", 
+              "donor_perfusion_start"), 
+            as.POSIXct, format="%d/%m/%Y %H:%M") %>% 
+  mutate(donor_egfr = if_else(is.na(donor_egfr), f_gfr(donor_creatinine, donor_age_year, donor_sex), donor_egfr)) %>%  
+  select(-text_data) %>% 
+  mutate(
+    kdri2012 = exp(
+      -.245 * (donor_age_year<40) +
+      0.396 *(donor_age_year>=60) +
+      0.265 * (donor_hypertension=="YES") +
+      0.0253 * as.integer((donor_weight-75)/10) +
+      0.00461 * donor_days_in_hospital +
+      0.0465 * (donor_adrenaline=="YES")
+    ),
+    kdri2019 = exp(
+      0.023 * (donor_age_year - 50) +
+      -0.152 * ((donor_height - 170)/10) + # as.integer
+      0.149 * (donor_hypertension == "YES") +
+      -0.184 * (donor_sex == "FEMALE") +
+      0.190 * (donor_cmv == "Positive") +
+      -0.023 * ((donor_egfr - 90)/10) + # as.integer
+      0.015 * donor_days_in_hospital
+    ),
+    donor_risk_cat_2019 = case_when(
+      kdri2019 <= 0.79 ~ "D1",
+      kdri2019 <= 1.12 ~ "D2",
+      kdri2019 <= 1.5 ~ "D3",
+      kdri2019 > 1.5 ~ "D4"
+    )
+  )
+```
+
+```{r}
+#| label: donor risk index 2019
+ggplot(df_donors, aes(donor_risk_cat_2019)) +
+  geom_bar()
+```
+
+## DRI - high risk vs low risk
+
+```{r}
+
+#| label: high risk low risk
+
+# merge with the tx dataset in order to get the organ type
+
+m_m_data <- m_m_data %>% 
+  left_join(df_donors, by = c("Donor Number" = "donor_number")) %>% 
+  mutate(risk2012 = if_else(kdri2012>1.34, "high", "low"),
+         risk2019 = if_else(kdri2019>1.34, "high", "low"))
+
+
+```
+
+```{r}
+#| label: high risk low risk 2012
+#| fig-width: 3
+#| 
+m_m_data %>%
+  filter(
+    Organ == "Kidney only",
+    donor_type == "DBD",
+    year(`KTX Date`) == 2023) %>%
+  ggplot(aes(factor(0), fill = risk2012)) +
+  geom_bar() +
+  geom_text(aes(label = after_stat(count)), stat = "count", size = 3, position = position_stack(vjust = 0.5)) +
+  xlab("") +
+  theme(axis.ticks.x = element_blank()) +
+  theme(axis.text.x = element_blank())
+
+
+# TODO add some explanation 
+
+```
+
+<!-- TODO add more years -->
+<!-- TODO get the hospital stay for all patients -->
+
+<!-- # Financial year -->
+
+<!-- ## 2022/23 -->
+
+```{r}
+#| label: FY2022-23
+#| include: false
+#| 
+y2022_23 <- m_m_data %>% 
+  filter(`KTX Date`>= "2022-04-01" & `KTX Date`<= "2023-03-31")
+
+y2022_23 %>% 
+  group_by(Organ) %>% 
+  summarise(n = n())
+  
+y2022_23 %>% 
+  filter(Organ == "Kidney only") %>% 
+  group_by(DonorType) %>% 
+  summarise(n = n())
+```
+```{r}
+#| label: FY2023-24
+#| include: false
+
+y2023_24 <- m_m_data %>% 
+  filter(`KTX Date`>= "2023-04-01" & `KTX Date`<= "2024-03-31")
+
+y2023_24 %>% 
+  group_by(Organ) %>% 
+  summarise(n = n())
+  
+y2023_24 %>% 
+  filter(Organ == "Kidney only") %>% 
+  group_by(DonorType) %>% 
+  summarise(n = n())
+```
+# Plans {.hidden}
+
+-   [x] import monthly declined offer dataset - thus the summary.xlsx and manual data collection will not be needed
+-   [x] import the m&m dataset to get the monthly tx numbers
+-   [x] replace NA with 0 in transplant column in summary_new
+-   [x] update the function to import the pancreas declined data as well
+-   [x] get the declined kidney data for Oct Nov Dec 2022
+-   [x] get the declined pancreas data from Oct 2022
+-   [ ] visualise
+    -   [ ] offers by DRI
+
+    -   [ ] offers by Offer Type
+
+    -   [ ] heatmap of the time of declined offers - we don't have the timings for the all the offers, that would be really nice.
+
+    -   [x] cumulative number of transplants
+
+        -   [x] kidney - deceased
+
+        -   [x] kidney - live
+
+        -   [x] pancreas
+
+    -   [x] CIT
+
+    -   [x] length of hospital stay
+
+    -   [x] DRI
+    - [ ] Hepatitis C
+-   [ ] create table of the numbers in the given months
+-   [ ] replicate Awad's slides
+-   \[ \]

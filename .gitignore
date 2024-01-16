@@ -1,0 +1,17 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+/.quarto/
+
+
+*.html
+*.pptx
+*.xlsx
+
+
+/Declined Offers Quarto_files
+/Declined-Offers-Quarto_files
+
+dev.RMD
