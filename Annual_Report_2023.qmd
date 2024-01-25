@@ -214,7 +214,7 @@ m_m_data_post_covid <- read_excel("../raw_data/M&M Database.xlsx", sheet = "Post
       # check if donor number contains 'KSS', NA should be FALSE
       str_detect(replace_na(`Donor Number`, ""), "KSS")
   ) %>%
-  select(Surname:`Donor Number`, kss,  tx_month, tx_month2, DOB, `D AGE (Y)`:HD, `CIT (K)`:`CIT (P) hours`, HCV)
+  select(Surname:`Donor Number`, kss,  tx_month, tx_month2, DOB, `D AGE (Y)`:`1month eGFR`, `CIT (K)`:`Date of Discharge`, HCV)
 
 # get precovid data
 
@@ -238,8 +238,14 @@ m_m_data_pre_covid <- read_excel("../raw_data/M&M Database.xlsx", sheet = "Pre-C
   ) %>%
    select(Surname:`KTX No.`, tx_month, tx_month2, DOB)
 
-m_m_data <- bind_rows(m_m_data_pre_covid, m_m_data_post_covid)
-
+m_m_data <- bind_rows(m_m_data_pre_covid, m_m_data_post_covid) %>% 
+  mutate(discharge = if_else(
+    !is.na(as.numeric(`Date of Discharge`)), 
+    as.Date(as.numeric(`Date of Discharge`), origin = "1899-12-30"), 
+    as.Date(`Date of Discharge`, "%d/%m/%Y"))) %>% 
+  select(-`Date of Discharge`)
+  
+  
 # summarise by month and organ
 m_m_data_summary <- m_m_data %>%
   filter(!DonorType == "LivingDonor") %>%
@@ -555,17 +561,20 @@ hospital_stay <- read_excel("../raw_data/TxDecember2023Finance.xlsx", sheet = "T
          length_of_stay = `of stay`) %>%
   drop_na(DoB) %>% 
   mutate(`Hospital No.`= str_sub(`Hospital No.`, 1, 7),
-         discharge_date = as.Date(as.numeric(discharge_date), origin = "1899-12-30"),
-         LOS = difftime(discharge_date, admission_date, units = "days")
+         discharge_date = as.Date(as.numeric(discharge_date), origin = "1899-12-30")
   ) %>% 
          # discharge_date = na_if(discharge_date, is.character())) %>% 
-  select(Name, DoB, `Hospital No.`, admission_date:length_of_stay, LOS)
+  select(Name, DoB, `Hospital No.`, admission_date:length_of_stay)
 
 
 # join hospital_stay to m_m_data
 m_m_data <- m_m_data %>% 
   mutate(`Hospital No.` = str_sub(`Hospital No.`, 1, 7)) %>% 
-  left_join(hospital_stay, by = c("Hospital No." = "Hospital No."))
+  left_join(hospital_stay, by = c("Hospital No." = "Hospital No.")) %>% 
+  mutate(discharge_date = if_else(is.na(discharge_date), discharge, discharge_date),
+         admission_date = if_else(is.na(admission_date), `Admission Date`, admission_date),
+         LOS = difftime(discharge_date, admission_date, units = "days")
+         )
 ```
 
 ## Length of stay - Overall
@@ -761,7 +770,8 @@ m_m_data %>%
          year(`KTX Date`) == 2023) %>% 
   ggplot(aes(x=kss, y=`CIT (K) hours`)) +
     geom_violin() +
-    geom_boxplot(width = 0.2) 
+    geom_boxplot(width = 0.2) +
+  xlab("Kidney Sharing Scheme")
 
 ```
 
@@ -925,7 +935,7 @@ df_donors <- df_donors %>%
 
 ```{r}
 #| label: donor risk index 2019
-ggplot(df_donors, aes(donor_risk_cat_2019)) +
+ggplot(df_donors, aes(donor_risk_cat_2019), fill = BLUE1) +
   geom_bar()
 ```
 
@@ -965,6 +975,71 @@ m_m_data %>%
 # TODO add some explanation 
 
 ```
+
+# Outcome
+
+## DGF
+
+```{r}
+#| label: DGF
+m_m_data %>%
+  filter(
+    Organ == "Kidney only",
+    year(`KTX Date`) == 2023) %>%
+  mutate(HD = if_else(is.na(HD), `DGF (10% in 48hrs)`, HD)) %>% 
+  filter(!is.na(HD)) %>%
+  ggplot(aes(x = DonorType, fill = HD)) +
+  geom_bar() +
+  scale_fill_manual("",         ###### in this call: colour change
+                    values = c("No" = BLUE1, "Yes" = RED1)) +
+  geom_text(aes(label = after_stat(count)), stat = "count", size = 3, position = position_stack(vjust = 0.5)) +
+  # scale_colour_manual(values=c("#FFFFFF", "white", "white")) +
+  xlab("") 
+# change the geom_text color to white 
+  
+
+
+  # theme(axis.ticks.x = element_blank()) +
+  # theme(axis.text.x = element_blank())
+```
+
+
+
+
+
+## 1 month GFR
+
+<!-- TODO dbd, dcd, living -->
+
+```{r}
+#| label: 1month-gfr
+#| fig-width: 7
+#| fig-height: 5
+#| fig-align: center
+#| 
+m_m_data %>%
+  filter(
+    Organ == "Kidney only",
+    year(`KTX Date`) == 2023) %>%
+  ggplot(aes(x = DonorType, y = `1month eGFR`)) +
+  geom_violin() +
+  geom_boxplot(width = 0.12) +
+  xlab("") +
+  ylab("1 month eGFR (ml/min/1.73m2)")
+
+```
+
+```{r}
+#| label: 1 month gfr_table
+# tbl-cap: CIT for kidney transplants
+m_m_data %>%
+  filter(Organ == "Kidney only",
+         year(`KTX Date`) == 2023) %>%
+  select(`1month eGFR`, DonorType) %>%
+  tbl_summary(by="DonorType")
+```
+
+
 
 <!-- TODO add more years -->
 <!-- TODO get the hospital stay for all patients -->
@@ -1037,3 +1112,5 @@ y2023_24 %>%
 -   [ ] create table of the numbers in the given months
 -   [ ] replicate Awad's slides
 -   \[ \]
+
+
