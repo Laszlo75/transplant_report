@@ -581,7 +581,6 @@ m_m_data <- m_m_data %>%
 
 ::: columns
 ::: {.column width="30%"}
-
 ```{r}
 #| label: overall-hospital-stay
 #| cap: Length of hospital stay
@@ -602,10 +601,9 @@ p1 <- m_m_data %>%
 
 p1
 ```
-
 :::
-::: {.column width="70%"}
 
+::: {.column width="70%"}
 ```{r}
 #| label: length-of-stay-overall1
 # tbl-cap: Length of stay - all transplants
@@ -619,6 +617,7 @@ m_m_data %>%
 :::
 
 ## Length of stay - Overall
+
 ::: columns
 ::: {.column width="30%"}
 ```{r}
@@ -633,7 +632,6 @@ p1 +
   coord_cartesian(ylim=c(0, 30))
 
 ```
-
 :::
 
 ::: {.column width="70%"}
@@ -785,8 +783,6 @@ m_m_data %>%
   select(`CIT (K) hours`, kss) %>%
   tbl_summary(by=kss)
 ```
-
-
 
 ## CIT - Pancreas
 
@@ -1003,10 +999,6 @@ m_m_data %>%
   # theme(axis.text.x = element_blank())
 ```
 
-
-
-
-
 ## 1 month GFR
 
 <!-- TODO dbd, dcd, living -->
@@ -1039,9 +1031,8 @@ m_m_data %>%
   tbl_summary(by="DonorType")
 ```
 
-
-
 <!-- TODO add more years -->
+
 <!-- TODO get the hospital stay for all patients -->
 
 <!-- # Financial year -->
@@ -1064,6 +1055,7 @@ y2022_23 %>%
   group_by(DonorType) %>% 
   summarise(n = n())
 ```
+
 ```{r}
 #| label: FY2023-24
 #| include: false
@@ -1080,6 +1072,7 @@ y2023_24 %>%
   group_by(DonorType) %>% 
   summarise(n = n())
 ```
+
 # Plans {.hidden}
 
 -   [x] import monthly declined offer dataset - thus the summary.xlsx and manual data collection will not be needed
@@ -1107,10 +1100,10 @@ y2023_24 %>%
 
     -   [x] length of hospital stay
 
-    -   [x] DRI
-    - [ ] Hepatitis C
+    -   [ ] DRI
+
+    -   [x] Hepatitis C
 -   [ ] create table of the numbers in the given months
 -   [ ] replicate Awad's slides
--   \[ \]
-
-
+-   [ ] put the import and data cleaning into separate file
+-   [ ] slides and report parameterised - just put the year into the YAML header and that year will be rendered
